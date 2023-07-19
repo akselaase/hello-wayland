@@ -51,7 +51,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-/hello-wayland
-/xdg-shell-client-protocol.h
-/xdg-shell-protocol.c
-/cat.h
+build/hello-wayland
+src/xdg-shell-client-protocol.h
+src/xdg-shell-protocol.c
+src/cat.h
