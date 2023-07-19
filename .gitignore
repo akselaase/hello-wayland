@@ -54,4 +54,3 @@ dkms.conf
 build/hello-wayland
 src/xdg-shell-client-protocol.h
 src/xdg-shell-protocol.c
-src/cat.h

@@ -8,7 +8,6 @@
 #include <wayland-client-protocol.h>
 #include <linux/input-event-codes.h>
 
-#include "cat.h"
 #include "shm.h"
 #include "xdg-shell-client-protocol.h"
 
@@ -126,8 +125,17 @@ static struct wl_buffer *create_buffer() {
 		stride, WL_SHM_FORMAT_ARGB8888);
 	wl_shm_pool_destroy(pool);
 
-	// MagickImage is from cat.h
-	memcpy(shm_data, MagickImage, size);
+    /* Draw checkerboxed background */
+	uint32_t *data = shm_data;
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            if ((x + y / 8 * 8) % 16 < 8)
+                data[y * width + x] = 0xFF666666;
+            else
+                data[y * width + x] = 0xFFEEEEEE;
+        }
+    }
+
 	return buffer;
 }
 
