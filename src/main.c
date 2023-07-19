@@ -10,6 +10,7 @@
 #include <wayland-client.h>
 
 #include "shm.h"
+#include "mandelbrot.h"
 #include "xdg-shell-client-protocol.h"
 
 struct client_state {
@@ -19,12 +20,14 @@ struct client_state {
     struct wl_shm *wl_shm;
     struct wl_compositor *wl_compositor;
     struct xdg_wm_base *xdg_wm_base;
+
     /* Objects */
     struct wl_seat *wl_seat;
     struct wl_surface *wl_surface;
     struct xdg_surface *xdg_surface;
     struct xdg_toplevel *xdg_toplevel;
     struct wl_pointer *wl_pointer;
+
     /* State */
     bool running;
 
@@ -32,7 +35,8 @@ struct client_state {
     int height;
 
     int last_frame;
-    float pattern_offset;
+
+    const struct mb_task *mb_task;
 };
 
 static void
@@ -75,14 +79,10 @@ render_frame(struct client_state *state) {
     wl_shm_pool_destroy(pool);
     close(fd);
 
-    /* Draw checkerboxed background */
-    int offset = (int) state->pattern_offset % 8;
-    for (int y = 0; y < state->height; ++y) {
-        for (int x = 0; x < state->width; ++x) {
-            if (((x + offset) + (y + offset) / 8 * 8) % 16 < 8)
-                data[y * state->width + x] = 0xFF666666;
-            else
-                data[y * state->width + x] = 0xFFEEEEEE;
+    // Colorize mandelbrot
+    for (int y = 0; y < state->height && y < state->mb_task->height; y++) {
+        for (int x = 0; x < state->width && x < state->mb_task->width; x++) {
+            data[y * state->width + x] = 0xFF000000 | state->mb_task->data[y * state->mb_task->stride + x];
         }
     }
 
@@ -128,11 +128,6 @@ wl_surface_frame_done(void *data, struct wl_callback *cb, uint32_t time) {
     struct client_state *state = data;
     cb = wl_surface_frame(state->wl_surface);
     wl_callback_add_listener(cb, &wl_surface_frame_listener, state);
-
-    if (state->last_frame != 0) {
-        int elapsed = time - state->last_frame;
-        state->pattern_offset += elapsed / 1000.0 * 24;
-    }
 
     struct wl_buffer *buffer = render_frame(state);
     wl_surface_attach(state->wl_surface, buffer, 0, 0);
@@ -249,10 +244,26 @@ static const struct wl_registry_listener registry_listener = {
 
 int
 main(int argc, char *argv[]) {
+    int mandelbrot_iters[480 * 480] = {128};
+
+    struct mb_machine *mb_machine = mb_create(8);
+    struct mb_task mb_task = {
+        .width = 480, .height = 480,
+        .stride = 480,
+        .max_iterations = 1000000,
+        .chunk_width = 8, .chunk_height = 8,
+        .xmin = -2.5, .xmax = 1,
+        .ymin = -1.5, .ymax = 1.5,
+        .data = mandelbrot_iters,
+    };
+    mb_set_task(mb_machine, &mb_task);
+    mb_start(mb_machine);
+
     struct client_state state = {
         .running = true,
         .width = 480,
         .height = 480,
+        .mb_task = &mb_task,
     };
 
     state.wl_display = wl_display_connect(NULL);
@@ -294,6 +305,8 @@ main(int argc, char *argv[]) {
     xdg_toplevel_destroy(state.xdg_toplevel);
     xdg_surface_destroy(state.xdg_surface);
     wl_surface_destroy(state.wl_surface);
+
+    mb_destroy(mb_machine);
 
     return EXIT_SUCCESS;
 }

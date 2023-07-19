@@ -10,8 +10,8 @@ WAYLAND_SCANNER = $(shell pkg-config --variable=wayland_scanner wayland-scanner)
 
 XDG_SHELL_PROTOCOL = $(WAYLAND_PROTOCOLS_DIR)/stable/xdg-shell/xdg-shell.xml
 
-HEADERS=xdg-shell-client-protocol.h shm.h
-SOURCES=main.c xdg-shell-protocol.c shm.c
+HEADERS=xdg-shell-client-protocol.h shm.h mandelbrot.h
+SOURCES=main.c xdg-shell-protocol.c shm.c mandelbrot.c
 
 HEADERS:=$(addprefix src/,$(HEADERS))
 SOURCES:=$(addprefix src/,$(SOURCES))
